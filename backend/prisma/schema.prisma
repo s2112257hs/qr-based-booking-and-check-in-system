@@ -23,6 +23,12 @@ enum CheckinResult {
   INVALID
 }
 
+enum boatName {
+  W_speed
+  Hiriwave
+  Small_speed
+}
+
 model User {
   id                     String    @id @default(uuid()) @db.Uuid
   role                   UserRole
@@ -37,7 +43,7 @@ model Trip {
   id               String    @id @default(uuid()) @db.Uuid
   date             DateTime  @db.Date
   start_time       DateTime  @db.Time(6)
-  boat             String?
+  boat             boatName
   created_by_user_id String  @db.Uuid
   created_at       DateTime  @default(now())
 
@@ -54,7 +60,7 @@ model Booking {
   pax_count            Int
   inhouse              Boolean
   guesthouse_name      String
-  status               BookingStatus
+  status               BookingStatus @default(ACTIVE)
   created_by_user_id   String       @db.Uuid
   created_at           DateTime     @default(now())
   cancelled_by_user_id String?      @db.Uuid

@@ -32,6 +32,9 @@ describe('ScanService', () => {
           },
         }),
       },
+      trip: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'trip-2' }),
+      },
       checkin: { create: jest.fn().mockResolvedValue({}) },
     };
     const service = new ScanService(prisma);
@@ -43,7 +46,7 @@ describe('ScanService', () => {
     });
     expect(result).toEqual({
       result: CheckinResult.INVALID,
-      reason: 'TRIP_MISMATCH',
+      reason: 'WRONG_TRIP',
     });
     expect(prisma.checkin.create).toHaveBeenCalled();
   });

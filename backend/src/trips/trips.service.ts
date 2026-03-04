@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { boatName } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -8,14 +9,14 @@ export class TripsService {
   createTrip(data: {
     date: string;
     startTime: string;
-    boat?: string;
+    boat?: boatName;
     createdByUserId: string;
   }) {
     return this.prisma.trip.create({
       data: {
         date: new Date(data.date),
         start_time: new Date(`1970-01-01T${data.startTime}:00.000Z`),
-        boat: data.boat,
+        boat: data.boat ?? boatName.W_speed,
         created_by_user_id: data.createdByUserId,
       },
     });

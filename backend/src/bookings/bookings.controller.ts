@@ -38,12 +38,15 @@ export class BookingsController {
     if (
       !body.tripId ||
       !body.guestName ||
-      !body.paxCount ||
+      body.paxCount === undefined ||
       body.inhouse === undefined
     ) {
       throw new BadRequestException(
         'tripId, guestName, paxCount, inhouse are required',
       );
+    }
+    if (!Number.isInteger(body.paxCount) || body.paxCount < 1) {
+      throw new BadRequestException('paxCount must be an integer >= 1');
     }
 
     return this.bookingsService.createBooking({
