@@ -30,55 +30,57 @@ enum boatName {
 }
 
 model User {
-  id                     String    @id @default(uuid()) @db.Uuid
-  role                   UserRole
-  is_active              Boolean   @default(true)
-  createdTrips           Trip[]    @relation("TripCreator")
-  createdBookings        Booking[] @relation("BookingCreator")
-  cancelledBookings      Booking[] @relation("BookingCanceller")
-  scanAttempts           Checkin[] @relation("Scanner")
+  id                String    @id @default(uuid()) @db.Uuid
+  username          String?   @unique
+  password_hash     String?
+  role              UserRole
+  is_active         Boolean   @default(true)
+  createdTrips      Trip[]    @relation("TripCreator")
+  createdBookings   Booking[] @relation("BookingCreator")
+  cancelledBookings Booking[] @relation("BookingCanceller")
+  scanAttempts      Checkin[] @relation("Scanner")
 }
 
 model Trip {
-  id               String    @id @default(uuid()) @db.Uuid
-  date             DateTime  @db.Date
-  start_time       DateTime  @db.Time(6)
-  boat             boatName
-  created_by_user_id String  @db.Uuid
-  created_at       DateTime  @default(now())
+  id                  String    @id @default(uuid()) @db.Uuid
+  date                DateTime  @db.Date
+  start_time          DateTime  @db.Time(6)
+  boat                boatName
+  created_by_user_id  String    @db.Uuid
+  created_at          DateTime  @default(now())
 
-  createdBy        User      @relation("TripCreator", fields: [created_by_user_id], references: [id])
-  bookings         Booking[]
-  checkinsByTrip   Checkin[] @relation("CheckinTrip")
+  createdBy           User      @relation("TripCreator", fields: [created_by_user_id], references: [id])
+  bookings            Booking[]
+  checkinsByTrip      Checkin[] @relation("CheckinTrip")
   checkinsBySelection Checkin[] @relation("CheckinSelectedTrip")
 }
 
 model Booking {
-  id                   String       @id @default(uuid()) @db.Uuid
-  trip_id              String       @db.Uuid
+  id                   String        @id @default(uuid()) @db.Uuid
+  trip_id              String        @db.Uuid
   guest_name           String
   pax_count            Int
   inhouse              Boolean
   guesthouse_name      String
   status               BookingStatus @default(ACTIVE)
-  created_by_user_id   String       @db.Uuid
-  created_at           DateTime     @default(now())
-  cancelled_by_user_id String?      @db.Uuid
+  created_by_user_id   String        @db.Uuid
+  created_at           DateTime      @default(now())
+  cancelled_by_user_id String?       @db.Uuid
   cancelled_at         DateTime?
 
-  trip                 Trip         @relation(fields: [trip_id], references: [id])
-  createdBy            User         @relation("BookingCreator", fields: [created_by_user_id], references: [id])
-  cancelledBy          User?        @relation("BookingCanceller", fields: [cancelled_by_user_id], references: [id])
+  trip                 Trip          @relation(fields: [trip_id], references: [id])
+  createdBy            User          @relation("BookingCreator", fields: [created_by_user_id], references: [id])
+  cancelledBy          User?         @relation("BookingCanceller", fields: [cancelled_by_user_id], references: [id])
   ticket               Ticket?
   checkins             Checkin[]
 }
 
 model Ticket {
-  booking_id   String    @id @db.Uuid
-  token_hash   String    @unique
-  issued_at    DateTime  @default(now())
+  booking_id String   @id @db.Uuid
+  token_hash String   @unique
+  issued_at  DateTime @default(now())
 
-  booking      Booking   @relation(fields: [booking_id], references: [id])
+  booking    Booking  @relation(fields: [booking_id], references: [id])
 }
 
 model Checkin {

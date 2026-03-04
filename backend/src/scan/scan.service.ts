@@ -11,6 +11,23 @@ class DuplicateValidCheckinError extends Error {}
 export class ScanService {
   constructor(private readonly prisma: PrismaService) {}
 
+  listLogs(tripId?: string) {
+    return this.prisma.checkin.findMany({
+      where: tripId
+        ? {
+            OR: [{ trip_id: tripId }, { selected_trip_id: tripId }],
+          }
+        : undefined,
+      include: {
+        booking: true,
+        trip: true,
+        selectedTrip: true,
+        scannedBy: true,
+      },
+      orderBy: { scanned_at: 'desc' },
+    });
+  }
+
   private toDateOnlyString(value: Date): string {
     const y = value.getUTCFullYear();
     const m = String(value.getUTCMonth() + 1).padStart(2, '0');

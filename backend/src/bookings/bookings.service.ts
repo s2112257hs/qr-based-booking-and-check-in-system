@@ -15,6 +15,20 @@ import { PrismaService } from '../prisma/prisma.service';
 export class BookingsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  listBookings(tripId?: string) {
+    return this.prisma.booking.findMany({
+      where: tripId ? { trip_id: tripId } : undefined,
+      include: {
+        trip: true,
+        ticket: true,
+        checkins: {
+          orderBy: { scanned_at: 'desc' },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
   async createBooking(input: {
     tripId: string;
     guestName: string;
@@ -99,6 +113,82 @@ export class BookingsService {
     if (!booking) throw new NotFoundException('Booking not found');
 
     return join(process.cwd(), 'tickets', `${bookingId}.pdf`);
+  }
+
+  async updateBooking(
+    bookingId: string,
+    input: {
+      tripId?: string;
+      guestName?: string;
+      paxCount?: number;
+      inhouse?: boolean;
+      guesthouseName?: string;
+      status?: BookingStatus;
+    },
+  ) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (input.tripId) {
+      const trip = await this.prisma.trip.findUnique({
+        where: { id: input.tripId },
+        select: { id: true },
+      });
+      if (!trip) {
+        throw new NotFoundException('Trip not found');
+      }
+    }
+
+    if (input.paxCount !== undefined) {
+      if (!Number.isInteger(input.paxCount) || input.paxCount < 1) {
+        throw new BadRequestException('paxCount must be an integer >= 1');
+      }
+    }
+
+    const nextInhouse = input.inhouse ?? booking.inhouse;
+    const propertyName = process.env.PROPERTY_NAME ?? 'Property';
+    const nextGuesthouseName = nextInhouse
+      ? propertyName
+      : (input.guesthouseName ?? booking.guesthouse_name).trim();
+
+    if (!nextGuesthouseName) {
+      throw new BadRequestException(
+        'guesthouse_name is required when inhouse is false',
+      );
+    }
+
+    return this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        trip_id: input.tripId,
+        guest_name: input.guestName,
+        pax_count: input.paxCount,
+        inhouse: nextInhouse,
+        guesthouse_name: nextGuesthouseName,
+        status: input.status,
+      },
+    });
+  }
+
+  async deleteBooking(bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.checkin.deleteMany({ where: { booking_id: bookingId } });
+      await tx.ticket.deleteMany({ where: { booking_id: bookingId } });
+      await tx.booking.delete({ where: { id: bookingId } });
+    });
+
+    return { deleted: true, bookingId };
   }
 
   private async generateTicketPdf(bookingId: string, token: string) {

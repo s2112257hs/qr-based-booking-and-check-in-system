@@ -2,6 +2,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { BookingStatus, CheckinResult, UserRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -17,28 +18,38 @@ jest.mock('qrcode', () => ({
 
 type TestUser = {
   id: string;
+  username: string;
+  password_hash: string;
   role: UserRole;
   is_active: boolean;
 };
 
 const users: Record<string, TestUser> = {
-  receptionist: {
+  reception_user: {
     id: 'receptionist',
+    username: 'reception_user',
+    password_hash: bcrypt.hashSync('pass123', 4),
     role: UserRole.receptionist,
     is_active: true,
   },
-  scanner: {
+  scanner_user: {
     id: 'scanner',
+    username: 'scanner_user',
+    password_hash: bcrypt.hashSync('pass123', 4),
     role: UserRole.staff_scanner,
     is_active: true,
   },
-  admin: {
+  admin_user: {
     id: 'admin',
+    username: 'admin_user',
+    password_hash: bcrypt.hashSync('pass123', 4),
     role: UserRole.super_admin,
     is_active: true,
   },
-  inactive: {
+  inactive_user: {
     id: 'inactive',
+    username: 'inactive_user',
+    password_hash: bcrypt.hashSync('pass123', 4),
     role: UserRole.receptionist,
     is_active: false,
   },
@@ -57,10 +68,13 @@ describe('Backend API (e2e)', () => {
   let app: INestApplication;
   let prisma: ReturnType<typeof createMockPrisma>;
 
-  const loginAs = async (userId: string): Promise<string> => {
+  const loginAs = async (
+    username: string,
+    password = 'pass123',
+  ): Promise<string> => {
     const res = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ userId })
+      .send({ username, password })
       .expect(201);
     return res.body.access_token as string;
   };
@@ -85,7 +99,8 @@ describe('Backend API (e2e)', () => {
     jest.clearAllMocks();
 
     prisma.user.findUnique.mockImplementation(
-      async ({ where }: { where: { id: string } }) => users[where.id] ?? null,
+      async ({ where }: { where: { username: string } }) =>
+        users[where.username] ?? null,
     );
 
     prisma.trip.create.mockImplementation(async ({ data }: any) => ({
@@ -138,7 +153,7 @@ describe('Backend API (e2e)', () => {
   });
 
   describe('Auth', () => {
-    it('POST /auth/login returns 400 for missing userId', async () => {
+    it('POST /auth/login returns 400 for missing username/password', async () => {
       await request(app.getHttpServer())
         .post('/auth/login')
         .send({})
@@ -148,14 +163,14 @@ describe('Backend API (e2e)', () => {
     it('POST /auth/login returns 401 for inactive user', async () => {
       await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ userId: 'inactive' })
+        .send({ username: 'inactive_user', password: 'pass123' })
         .expect(401);
     });
 
     it('POST /auth/login returns access token for active user', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ userId: 'receptionist' })
+        .send({ username: 'reception_user', password: 'pass123' })
         .expect(201);
 
       expect(res.body.access_token).toEqual(expect.any(String));
@@ -169,7 +184,7 @@ describe('Backend API (e2e)', () => {
     });
 
     it('POST /trips returns 403 for staff_scanner role', async () => {
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       await request(app.getHttpServer())
         .post('/trips')
         .set('Authorization', `Bearer ${token}`)
@@ -178,7 +193,7 @@ describe('Backend API (e2e)', () => {
     });
 
     it('POST /trips validates date and time format', async () => {
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
 
       await request(app.getHttpServer())
         .post('/trips')
@@ -194,7 +209,7 @@ describe('Backend API (e2e)', () => {
     });
 
     it('POST /trips creates a trip for receptionist', async () => {
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
       const res = await request(app.getHttpServer())
         .post('/trips')
         .set('Authorization', `Bearer ${token}`)
@@ -209,7 +224,7 @@ describe('Backend API (e2e)', () => {
       prisma.trip.findMany.mockResolvedValue([
         { id: 'trip-1', date: new Date('2026-03-04'), start_time: new Date() },
       ]);
-      const token = await loginAs('admin');
+      const token = await loginAs('admin_user');
 
       const res = await request(app.getHttpServer())
         .get('/trips')
@@ -223,7 +238,7 @@ describe('Backend API (e2e)', () => {
 
   describe('Bookings', () => {
     it('POST /bookings returns 403 for staff_scanner role', async () => {
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       await request(app.getHttpServer())
         .post('/bookings')
         .set('Authorization', `Bearer ${token}`)
@@ -237,7 +252,7 @@ describe('Backend API (e2e)', () => {
     });
 
     it('POST /bookings validates required fields and paxCount', async () => {
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
 
       await request(app.getHttpServer())
         .post('/bookings')
@@ -258,7 +273,7 @@ describe('Backend API (e2e)', () => {
     });
 
     it('POST /bookings requires guesthouse_name when inhouse is false', async () => {
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
 
       await request(app.getHttpServer())
         .post('/bookings')
@@ -273,7 +288,7 @@ describe('Backend API (e2e)', () => {
     });
 
     it('POST /bookings creates booking and uses property name when inhouse is true', async () => {
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
       const res = await request(app.getHttpServer())
         .post('/bookings')
         .set('Authorization', `Bearer ${token}`)
@@ -307,7 +322,7 @@ describe('Backend API (e2e)', () => {
         id: 'booking-1',
         status: BookingStatus.CANCELLED,
       });
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
 
       const res = await request(app.getHttpServer())
         .patch('/bookings/booking-1/cancel')
@@ -322,7 +337,7 @@ describe('Backend API (e2e)', () => {
         id: 'booking-1',
         status: BookingStatus.CHECKED_IN,
       });
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
 
       await request(app.getHttpServer())
         .patch('/bookings/booking-1/cancel')
@@ -342,7 +357,7 @@ describe('Backend API (e2e)', () => {
     };
 
     it('POST /scan returns 400 for missing payload', async () => {
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -351,7 +366,7 @@ describe('Backend API (e2e)', () => {
     });
 
     it('POST /scan returns 403 for receptionist role', async () => {
-      const token = await loginAs('receptionist');
+      const token = await loginAs('reception_user');
       await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -361,7 +376,7 @@ describe('Backend API (e2e)', () => {
 
     it('POST /scan returns TOKEN_NOT_FOUND for unknown token', async () => {
       prisma.ticket.findUnique.mockResolvedValue(null);
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       const res = await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -377,7 +392,7 @@ describe('Backend API (e2e)', () => {
     it('POST /scan returns SELECTED_TRIP_NOT_FOUND', async () => {
       prisma.ticket.findUnique.mockResolvedValue(activeTicket);
       prisma.trip.findUnique.mockResolvedValue(null);
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       const res = await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -395,7 +410,7 @@ describe('Backend API (e2e)', () => {
         },
       });
       prisma.trip.findUnique.mockResolvedValue({ id: 'trip-1' });
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       const res = await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -409,7 +424,7 @@ describe('Backend API (e2e)', () => {
     it('POST /scan returns WRONG_TRIP', async () => {
       prisma.ticket.findUnique.mockResolvedValue(activeTicket);
       prisma.trip.findUnique.mockResolvedValue({ id: 'trip-2' });
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       const res = await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -429,7 +444,7 @@ describe('Backend API (e2e)', () => {
       });
       prisma.trip.findUnique.mockResolvedValue({ id: 'trip-1' });
 
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       const res = await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -442,7 +457,7 @@ describe('Backend API (e2e)', () => {
     it('POST /scan returns VALID and performs transaction', async () => {
       prisma.ticket.findUnique.mockResolvedValue(activeTicket);
       prisma.trip.findUnique.mockResolvedValue({ id: 'trip-1' });
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       const res = await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -467,7 +482,7 @@ describe('Backend API (e2e)', () => {
           booking: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
         }),
       );
-      const token = await loginAs('scanner');
+      const token = await loginAs('scanner_user');
       const res = await request(app.getHttpServer())
         .post('/scan')
         .set('Authorization', `Bearer ${token}`)

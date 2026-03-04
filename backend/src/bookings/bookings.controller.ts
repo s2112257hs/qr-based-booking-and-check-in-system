@@ -2,15 +2,17 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
+  Query,
   Request,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { BookingStatus, UserRole } from '@prisma/client';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Roles } from '../common/roles.decorator';
@@ -21,6 +23,12 @@ import { BookingsService } from './bookings.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
+
+  @Get()
+  @Roles(UserRole.receptionist, UserRole.super_admin)
+  list(@Query('tripId') tripId?: string) {
+    return this.bookingsService.listBookings(tripId);
+  }
 
   @Post()
   @Roles(UserRole.receptionist, UserRole.super_admin)
@@ -66,6 +74,40 @@ export class BookingsController {
     @Request() req: { user: { id: string } },
   ) {
     return this.bookingsService.cancelBooking(bookingId, req.user.id);
+  }
+
+  @Patch(':bookingId')
+  @Roles(UserRole.super_admin)
+  update(
+    @Param('bookingId') bookingId: string,
+    @Body()
+    body: {
+      tripId?: string;
+      guestName?: string;
+      paxCount?: number;
+      inhouse?: boolean;
+      guesthouseName?: string;
+      status?: BookingStatus;
+    },
+  ) {
+    if (body.paxCount !== undefined) {
+      if (!Number.isInteger(body.paxCount) || body.paxCount < 1) {
+        throw new BadRequestException('paxCount must be an integer >= 1');
+      }
+    }
+    if (body.status && !Object.values(BookingStatus).includes(body.status)) {
+      throw new BadRequestException(
+        `status must be one of: ${Object.values(BookingStatus).join(', ')}`,
+      );
+    }
+
+    return this.bookingsService.updateBooking(bookingId, body);
+  }
+
+  @Delete(':bookingId')
+  @Roles(UserRole.super_admin)
+  remove(@Param('bookingId') bookingId: string) {
+    return this.bookingsService.deleteBooking(bookingId);
   }
 
   @Get(':bookingId/ticket')

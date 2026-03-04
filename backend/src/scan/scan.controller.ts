@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +18,12 @@ import { ScanService } from './scan.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ScanController {
   constructor(private readonly scanService: ScanService) {}
+
+  @Get('logs')
+  @Roles(UserRole.super_admin)
+  logs(@Query('tripId') tripId?: string) {
+    return this.scanService.listLogs(tripId);
+  }
 
   @Post()
   @Roles(UserRole.staff_scanner, UserRole.super_admin)

@@ -6,8 +6,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  login(@Body() body: { userId?: string }) {
-    if (!body.userId) throw new BadRequestException('userId is required');
-    return this.authService.login(body.userId);
+  login(@Body() body: { username?: string; password?: string }) {
+    if (!body.username || !body.password) {
+      throw new BadRequestException('username and password are required');
+    }
+
+    return this.authService.login(body.username, body.password);
   }
 }
