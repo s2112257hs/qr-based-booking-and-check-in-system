@@ -96,3 +96,11 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Database schema
+
+A starter relational schema for the QR-based booking and check-in domain is available at:
+
+- `database/schema.sql`
+
+You can apply it to PostgreSQL with your preferred migration workflow.
