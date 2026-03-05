@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CreateTripModal } from "./CreateTripModal";
 import { ManageBookingsModal } from "./ManageBookingsModal";
 import { ManageTripEditorModal } from "./ManageTripEditorModal";
+import { ScanBookingsModal } from "./ScanBookingsModal";
 import { TripActionModal } from "./TripActionModal";
 import { BOATS, TRIP_TYPE_DURATION_MINUTES } from "./trip-config";
 
@@ -202,9 +203,15 @@ function layoutDayEvents(events: CalendarTripEvent[]): PositionedCalendarTripEve
 export function TripsPageContent({
   token,
   canCreate,
+  canManageTrip = true,
+  canManageBookings = true,
+  canScanBookings = true,
 }: {
   token: string;
   canCreate: boolean;
+  canManageTrip?: boolean;
+  canManageBookings?: boolean;
+  canScanBookings?: boolean;
 }) {
   const [boatFilter, setBoatFilter] = useState<BoatFilter>("W_speed");
   const calendarViewportRef = useRef<HTMLDivElement | null>(null);
@@ -221,6 +228,7 @@ export function TripsPageContent({
   const [tripActionOpen, setTripActionOpen] = useState(false);
   const [manageTripEditorOpen, setManageTripEditorOpen] = useState(false);
   const [manageTripBookingsOpen, setManageTripBookingsOpen] = useState(false);
+  const [scanBookingsOpen, setScanBookingsOpen] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
 
   const visibleDayCount = useMemo(() => {
@@ -616,6 +624,9 @@ export function TripsPageContent({
       <TripActionModal
         isOpen={tripActionOpen}
         trip={selectedTrip}
+        canManageTrip={canManageTrip}
+        canManageBookings={canManageBookings}
+        canScanBookings={canScanBookings}
         onClose={() => setTripActionOpen(false)}
         onOpenEditor={() => {
           setTripActionOpen(false);
@@ -625,23 +636,40 @@ export function TripsPageContent({
           setTripActionOpen(false);
           setManageTripBookingsOpen(true);
         }}
+        onOpenScan={() => {
+          setTripActionOpen(false);
+          setScanBookingsOpen(true);
+        }}
       />
 
-      <ManageTripEditorModal
-        token={token}
-        trip={selectedTrip}
-        isOpen={manageTripEditorOpen}
-        onClose={() => setManageTripEditorOpen(false)}
-        onSuccess={refreshTrips}
-      />
+      {canManageTrip && (
+        <ManageTripEditorModal
+          token={token}
+          trip={selectedTrip}
+          isOpen={manageTripEditorOpen}
+          onClose={() => setManageTripEditorOpen(false)}
+          onSuccess={refreshTrips}
+        />
+      )}
 
-      <ManageBookingsModal
-        token={token}
-        trip={selectedTrip}
-        isOpen={manageTripBookingsOpen}
-        onClose={() => setManageTripBookingsOpen(false)}
-        onSuccess={refreshTrips}
-      />
+      {canManageBookings && (
+        <ManageBookingsModal
+          token={token}
+          trip={selectedTrip}
+          isOpen={manageTripBookingsOpen}
+          onClose={() => setManageTripBookingsOpen(false)}
+          onSuccess={refreshTrips}
+        />
+      )}
+
+      {canScanBookings && (
+        <ScanBookingsModal
+          token={token}
+          trip={selectedTrip}
+          isOpen={scanBookingsOpen}
+          onClose={() => setScanBookingsOpen(false)}
+        />
+      )}
     </div>
   );
 }

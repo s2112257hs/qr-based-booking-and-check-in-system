@@ -1,5 +1,10 @@
 import { apiUrl } from "@/api/client";
-import { Booking, BookingResponse, BookingStatus } from "@/types";
+import {
+  Booking,
+  BookingResponse,
+  BookingStatus,
+  TicketEmailDelivery,
+} from "@/types";
 import { parseErrorMessage, withAuth } from "@/utils/http";
 
 export async function createBooking(
@@ -7,10 +12,12 @@ export async function createBooking(
   input: {
     tripId: string;
     guestName: string;
+    guestEmail: string;
     adultPaxCount: number;
     childrenPaxCount: number;
     inhouse: boolean;
     guesthouseName?: string;
+    sendTicketEmail?: boolean;
   },
 ): Promise<BookingResponse> {
   const response = await fetch(apiUrl("/bookings"), {
@@ -60,6 +67,7 @@ export async function updateBooking(
   input: {
     tripId?: string;
     guestName?: string;
+    guestEmail?: string;
     adultPaxCount?: number;
     childrenPaxCount?: number;
     inhouse?: boolean;
@@ -89,4 +97,22 @@ export async function deleteBooking(
   if (!response.ok) {
     throw new Error(await parseErrorMessage(response));
   }
+}
+
+export async function sendBookingTicketEmail(
+  token: string,
+  bookingId: string,
+  email?: string,
+): Promise<TicketEmailDelivery> {
+  const response = await fetch(apiUrl(`/bookings/${bookingId}/send-ticket`), {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }, token),
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
+
+  return (await response.json()) as TicketEmailDelivery;
 }

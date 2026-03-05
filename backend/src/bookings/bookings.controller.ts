@@ -42,6 +42,8 @@ export class BookingsController {
       childrenPaxCount?: number;
       inhouse?: boolean;
       guesthouseName?: string;
+      guestEmail?: string;
+      sendTicketEmail?: boolean;
     },
   ) {
     if (
@@ -49,10 +51,11 @@ export class BookingsController {
       !body.guestName ||
       body.adultPaxCount === undefined ||
       body.childrenPaxCount === undefined ||
-      body.inhouse === undefined
+      body.inhouse === undefined ||
+      body.guestEmail === undefined
     ) {
       throw new BadRequestException(
-        'tripId, guestName, adultPaxCount, childrenPaxCount, inhouse are required',
+        'tripId, guestName, guestEmail, adultPaxCount, childrenPaxCount, inhouse are required',
       );
     }
     if (!Number.isInteger(body.adultPaxCount) || body.adultPaxCount < 1) {
@@ -63,6 +66,12 @@ export class BookingsController {
         'childrenPaxCount must be an integer >= 0',
       );
     }
+    if (
+      body.sendTicketEmail !== undefined &&
+      typeof body.sendTicketEmail !== 'boolean'
+    ) {
+      throw new BadRequestException('sendTicketEmail must be a boolean');
+    }
 
     return this.bookingsService.createBooking({
       tripId: body.tripId,
@@ -71,6 +80,8 @@ export class BookingsController {
       childrenPaxCount: body.childrenPaxCount,
       inhouse: body.inhouse,
       guesthouseName: body.guesthouseName,
+      guestEmail: body.guestEmail,
+      sendTicketEmail: body.sendTicketEmail,
       createdByUserId: req.user.id,
     });
   }
@@ -96,6 +107,7 @@ export class BookingsController {
       childrenPaxCount?: number;
       inhouse?: boolean;
       guesthouseName?: string;
+      guestEmail?: string;
       status?: BookingStatus;
     },
   ) {
@@ -121,6 +133,15 @@ export class BookingsController {
     }
 
     return this.bookingsService.updateBooking(bookingId, body);
+  }
+
+  @Post(':bookingId/send-ticket')
+  @Roles(UserRole.receptionist, UserRole.super_admin)
+  sendTicket(
+    @Param('bookingId') bookingId: string,
+    @Body() body: { email?: string },
+  ) {
+    return this.bookingsService.sendTicketEmail(bookingId, body.email);
   }
 
   @Delete(':bookingId')

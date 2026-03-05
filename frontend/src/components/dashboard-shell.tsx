@@ -10,18 +10,13 @@ type NavItem = { label: string; href: string };
 
 function navItemsForRole(role: Role): NavItem[] {
   if (role === "receptionist") {
-    return [
-      { label: "Trips", href: "/trips" },
-      { label: "Bookings", href: "/bookings" },
-    ];
+    return [{ label: "Trips", href: "/trips" }];
   }
   if (role === "staff_scanner") {
-    return [{ label: "Scan Boarding Pass", href: "/scan" }];
+    return [{ label: "Trips", href: "/trips" }];
   }
   return [
     { label: "Trips", href: "/trips" },
-    { label: "Bookings", href: "/bookings" },
-    { label: "Scan Boarding Pass", href: "/scan" },
     { label: "Monthly Reports", href: "/admin/reports" },
     { label: "Staff Users", href: "/admin/staff-users" },
   ];

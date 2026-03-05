@@ -26,24 +26,41 @@ export type Trip = {
 };
 
 export type BookingStatus = "ACTIVE" | "CANCELLED" | "CHECKED_IN";
+export type TicketDeliveryStatus =
+  | "NOT_REQUESTED"
+  | "PENDING"
+  | "SENT"
+  | "FAILED";
 
 export type Booking = {
   id: string;
   trip_id: string;
   guest_name: string;
+  guest_email?: string | null;
   adult_pax_count: number;
   children_pax_count: number;
   inhouse: boolean;
   guesthouse_name: string;
   status: BookingStatus;
+  ticket_delivery_status: TicketDeliveryStatus;
+  ticket_delivery_last_attempt_at?: string | null;
+  ticket_delivery_last_error?: string | null;
   created_at: string;
   ticket?: { booking_id: string; token_hash: string; issued_at: string } | null;
+};
+
+export type TicketEmailDelivery = {
+  status: TicketDeliveryStatus;
+  message: string;
+  recipient?: string;
+  outboxPath?: string;
 };
 
 export type BookingResponse = {
   booking: { id: string; status: BookingStatus };
   token: string;
   ticketUrl: string;
+  emailDelivery: TicketEmailDelivery;
 };
 
 export type ScanResponse = {

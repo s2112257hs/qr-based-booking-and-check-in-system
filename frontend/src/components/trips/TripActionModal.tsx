@@ -5,17 +5,25 @@ import { Trip } from "@/types";
 type TripActionModalProps = {
   isOpen: boolean;
   trip: Trip | null;
+  canManageTrip: boolean;
+  canManageBookings: boolean;
+  canScanBookings: boolean;
   onClose: () => void;
   onOpenEditor: () => void;
   onOpenBookings: () => void;
+  onOpenScan: () => void;
 };
 
 export function TripActionModal({
   isOpen,
   trip,
+  canManageTrip,
+  canManageBookings,
+  canScanBookings,
   onClose,
   onOpenEditor,
   onOpenBookings,
+  onOpenScan,
 }: TripActionModalProps) {
   if (!isOpen || !trip) {
     return null;
@@ -30,20 +38,33 @@ export function TripActionModal({
           {new Date(trip.start_time).toISOString().slice(11, 16)} | {trip.boat}
         </p>
         <div className="mt-6 grid grid-cols-1 gap-3">
-          <button
-            className="rounded bg-indigo-700 px-4 py-2 text-white"
-            onClick={onOpenEditor}
-            type="button"
-          >
-            Manage Trip
-          </button>
-          <button
-            className="rounded bg-slate-900 px-4 py-2 text-white"
-            onClick={onOpenBookings}
-            type="button"
-          >
-            Manage Trip Bookings
-          </button>
+          {canManageTrip && (
+            <button
+              className="rounded bg-indigo-700 px-4 py-2 text-white"
+              onClick={onOpenEditor}
+              type="button"
+            >
+              Manage Trip
+            </button>
+          )}
+          {canManageBookings && (
+            <button
+              className="rounded bg-slate-900 px-4 py-2 text-white"
+              onClick={onOpenBookings}
+              type="button"
+            >
+              Manage Trip Bookings
+            </button>
+          )}
+          {canScanBookings && (
+            <button
+              className="rounded bg-emerald-700 px-4 py-2 text-white"
+              onClick={onOpenScan}
+              type="button"
+            >
+              Scan Bookings
+            </button>
+          )}
           <button className="rounded border px-4 py-2" onClick={onClose} type="button">
             Cancel
           </button>

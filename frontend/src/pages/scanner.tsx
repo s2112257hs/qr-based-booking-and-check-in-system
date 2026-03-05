@@ -10,7 +10,7 @@ export default function ScannerPage() {
 
   useEffect(() => {
     if (!router.isReady || !authorized) return;
-    router.replace("/scan");
+    router.replace("/trips");
   }, [authorized, router]);
 
   return null;

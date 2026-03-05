@@ -18,6 +18,13 @@ enum BookingStatus {
   CHECKED_IN
 }
 
+enum TicketDeliveryStatus {
+  NOT_REQUESTED
+  PENDING
+  SENT
+  FAILED
+}
+
 enum CheckinResult {
   VALID
   INVALID
@@ -79,11 +86,15 @@ model Booking {
   id                   String        @id @default(uuid()) @db.Uuid
   trip_id              String        @db.Uuid
   guest_name           String
+  guest_email          String?
   adult_pax_count      Int
   children_pax_count   Int
   inhouse              Boolean
   guesthouse_name      String
   status               BookingStatus @default(ACTIVE)
+  ticket_delivery_status          TicketDeliveryStatus @default(NOT_REQUESTED)
+  ticket_delivery_last_attempt_at DateTime?
+  ticket_delivery_last_error      String?
   created_by_user_id   String        @db.Uuid
   created_at           DateTime      @default(now())
   cancelled_by_user_id String?       @db.Uuid

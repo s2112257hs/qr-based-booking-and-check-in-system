@@ -1,0 +1,7 @@
+{
+  "to": "sugarfloormat@gmail.com",
+  "subject": "Trip Ticket - dasfd",
+  "body": "Lead guest: dasfd\nTrip date: 2026-03-06\nTrip start time: 16:31\nTicket URL: http://localhost:3001/api/bookings/f744bb70-f501-41da-80ad-6ba8d1f5f9fe/ticket\nTicket PDF path: C:\\Users\\user\\Documents\\fun\\qr-based-booking-and-check-in-system\\backend\\tickets\\f744bb70-f501-41da-80ad-6ba8d1f5f9fe.pdf",
+  "attachmentPath": "C:\\Users\\user\\Documents\\fun\\qr-based-booking-and-check-in-system\\backend\\tickets\\f744bb70-f501-41da-80ad-6ba8d1f5f9fe.pdf",
+  "createdAt": "2026-03-05T16:38:59.540Z"
+}

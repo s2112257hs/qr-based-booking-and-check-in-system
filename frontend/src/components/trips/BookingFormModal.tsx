@@ -6,9 +6,11 @@ import { FormEvent, useEffect, useState } from "react";
 
 export type BookingFormValues = {
   guestName: string;
+  guestEmail: string;
   adultPaxCount: number;
   childrenPaxCount: number;
   inhouse: boolean;
+  sendTicketEmail: boolean;
   guesthouseName: string;
   status: BookingStatus;
 };
@@ -21,13 +23,17 @@ type BookingFormModalProps = {
   onSave: (values: BookingFormValues) => void | Promise<void>;
   initialData?: BookingFormValues;
   showStatus?: boolean;
+  showSendTicketOption?: boolean;
+  requireGuestEmail?: boolean;
 };
 
 const DEFAULT_VALUES: BookingFormValues = {
   guestName: "",
+  guestEmail: "",
   adultPaxCount: 1,
   childrenPaxCount: 0,
   inhouse: true,
+  sendTicketEmail: false,
   guesthouseName: "",
   status: "ACTIVE",
 };
@@ -40,6 +46,8 @@ export function BookingFormModal({
   onSave,
   initialData,
   showStatus = false,
+  showSendTicketOption = false,
+  requireGuestEmail = false,
 }: BookingFormModalProps) {
   const [values, setValues] = useState<BookingFormValues>(DEFAULT_VALUES);
   const [errorMessage, setErrorMessage] = useState("");
@@ -64,12 +72,21 @@ export function BookingFormModal({
       setErrorMessage("Guesthouse name is required for non in-house bookings.");
       return;
     }
+    if (requireGuestEmail && !values.guestEmail.trim()) {
+      setErrorMessage("Guest email is required.");
+      return;
+    }
+    if (values.sendTicketEmail && !values.guestEmail.trim()) {
+      setErrorMessage("Guest email is required when sending ticket email.");
+      return;
+    }
 
     setErrorMessage("");
     try {
       await onSave({
         ...values,
         guestName: values.guestName.trim(),
+        guestEmail: values.guestEmail.trim().toLowerCase(),
         guesthouseName: values.guesthouseName.trim(),
       });
     } catch (error) {
@@ -85,7 +102,7 @@ export function BookingFormModal({
         <div className="flex items-center justify-between">
           <h4 className="text-lg font-semibold">{title}</h4>
           <button
-            className="rounded border px-3 py-1 text-sm"
+            className="cursor-pointer rounded border px-3 py-1 text-sm"
             onClick={onClose}
             type="button"
           >
@@ -99,7 +116,10 @@ export function BookingFormModal({
           </p>
         )}
 
-        <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onSubmit}>
+        <form
+          className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"
+          onSubmit={onSubmit}
+        >
           <label className="flex flex-col gap-1">
             <span className="text-sm text-slate-700">Lead Guest Name</span>
             <input
@@ -111,6 +131,22 @@ export function BookingFormModal({
               required
             />
           </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-sm text-slate-700">Guest Email</span>
+            <input
+              className="rounded border px-3 py-2"
+              inputMode="email"
+              type="email"
+              value={values.guestEmail}
+              onChange={(e) =>
+                setValues((prev) => ({ ...prev, guestEmail: e.target.value }))
+              }
+              placeholder="guest@example.com"
+              required={requireGuestEmail}
+            />
+          </label>
+
           <label className="flex flex-col gap-1">
             <span className="text-sm text-slate-700">Adult Pax Count</span>
             <input
@@ -127,6 +163,7 @@ export function BookingFormModal({
               required
             />
           </label>
+
           <label className="flex flex-col gap-1">
             <span className="text-sm text-slate-700">Children Pax Count</span>
             <input
@@ -192,8 +229,30 @@ export function BookingFormModal({
             </label>
           )}
 
+          {showSendTicketOption && (
+            <label className="md:col-span-2 flex cursor-pointer items-center gap-2 rounded border px-3 py-2">
+              <input
+                checked={values.sendTicketEmail}
+                onChange={(e) =>
+                  setValues((prev) => ({
+                    ...prev,
+                    sendTicketEmail: e.target.checked,
+                  }))
+                }
+                type="checkbox"
+                className="h-5 w-5"
+              />
+              <span className="text-sm text-slate-700">
+                Send ticket to email after creating booking
+              </span>
+            </label>
+          )}
+
           <div className="md:col-span-2 flex justify-end">
-            <button className="rounded bg-indigo-700 px-4 py-2 text-white" type="submit">
+            <button
+              className="cursor-pointer rounded bg-indigo-700 px-4 py-2 text-white"
+              type="submit"
+            >
               {submitLabel}
             </button>
           </div>
