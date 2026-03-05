@@ -7,7 +7,8 @@ export async function createBooking(
   input: {
     tripId: string;
     guestName: string;
-    paxCount: number;
+    adultPaxCount: number;
+    childrenPaxCount: number;
     inhouse: boolean;
     guesthouseName?: string;
   },
@@ -59,7 +60,8 @@ export async function updateBooking(
   input: {
     tripId?: string;
     guestName?: string;
-    paxCount?: number;
+    adultPaxCount?: number;
+    childrenPaxCount?: number;
     inhouse?: boolean;
     guesthouseName?: string;
     status?: BookingStatus;

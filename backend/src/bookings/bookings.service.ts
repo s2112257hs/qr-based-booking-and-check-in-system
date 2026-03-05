@@ -15,6 +15,53 @@ import { PrismaService } from '../prisma/prisma.service';
 export class BookingsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async bookedPaxForTrip(tripId: string, excludeBookingId?: string) {
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        trip_id: tripId,
+        status: { not: BookingStatus.CANCELLED },
+        ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+      },
+      select: {
+        adult_pax_count: true,
+        children_pax_count: true,
+      },
+    });
+
+    return bookings.reduce(
+      (sum, booking) => sum + booking.adult_pax_count + booking.children_pax_count,
+      0,
+    );
+  }
+
+  private async assertCapacityAvailable(input: {
+    tripId: string;
+    adultPaxCount: number;
+    childrenPaxCount: number;
+    excludeBookingId?: string;
+  }) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: input.tripId },
+      select: { id: true, max_capacity: true },
+    });
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
+    }
+
+    const requestedPax = input.adultPaxCount + input.childrenPaxCount;
+    const bookedPax = await this.bookedPaxForTrip(
+      input.tripId,
+      input.excludeBookingId,
+    );
+    if (bookedPax + requestedPax > trip.max_capacity) {
+      throw new BadRequestException(
+        `Trip capacity exceeded. Requested ${requestedPax}, available ${
+          trip.max_capacity - bookedPax
+        }`,
+      );
+    }
+  }
+
   listBookings(tripId?: string) {
     return this.prisma.booking.findMany({
       where: tripId ? { trip_id: tripId } : undefined,
@@ -32,7 +79,8 @@ export class BookingsService {
   async createBooking(input: {
     tripId: string;
     guestName: string;
-    paxCount: number;
+    adultPaxCount: number;
+    childrenPaxCount: number;
     inhouse: boolean;
     guesthouseName?: string;
     createdByUserId: string;
@@ -41,6 +89,12 @@ export class BookingsService {
       where: { id: input.tripId },
     });
     if (!trip) throw new NotFoundException('Trip not found');
+
+    await this.assertCapacityAvailable({
+      tripId: input.tripId,
+      adultPaxCount: input.adultPaxCount,
+      childrenPaxCount: input.childrenPaxCount,
+    });
 
     const propertyName = process.env.PROPERTY_NAME ?? 'Property';
     const guesthouseName = input.inhouse
@@ -63,7 +117,8 @@ export class BookingsService {
       data: {
         trip_id: input.tripId,
         guest_name: input.guestName,
-        pax_count: input.paxCount,
+        adult_pax_count: input.adultPaxCount,
+        children_pax_count: input.childrenPaxCount,
         inhouse: input.inhouse,
         guesthouse_name: guesthouseName,
         status: BookingStatus.ACTIVE,
@@ -120,7 +175,8 @@ export class BookingsService {
     input: {
       tripId?: string;
       guestName?: string;
-      paxCount?: number;
+      adultPaxCount?: number;
+      childrenPaxCount?: number;
       inhouse?: boolean;
       guesthouseName?: string;
       status?: BookingStatus;
@@ -143,13 +199,35 @@ export class BookingsService {
       }
     }
 
-    if (input.paxCount !== undefined) {
-      if (!Number.isInteger(input.paxCount) || input.paxCount < 1) {
-        throw new BadRequestException('paxCount must be an integer >= 1');
+    if (input.adultPaxCount !== undefined) {
+      if (!Number.isInteger(input.adultPaxCount) || input.adultPaxCount < 1) {
+        throw new BadRequestException('adultPaxCount must be an integer >= 1');
+      }
+    }
+    if (input.childrenPaxCount !== undefined) {
+      if (
+        !Number.isInteger(input.childrenPaxCount) ||
+        input.childrenPaxCount < 0
+      ) {
+        throw new BadRequestException(
+          'childrenPaxCount must be an integer >= 0',
+        );
       }
     }
 
     const nextInhouse = input.inhouse ?? booking.inhouse;
+    const nextTripId = input.tripId ?? booking.trip_id;
+    const nextAdultPaxCount = input.adultPaxCount ?? booking.adult_pax_count;
+    const nextChildrenPaxCount =
+      input.childrenPaxCount ?? booking.children_pax_count;
+
+    await this.assertCapacityAvailable({
+      tripId: nextTripId,
+      adultPaxCount: nextAdultPaxCount,
+      childrenPaxCount: nextChildrenPaxCount,
+      excludeBookingId: booking.id,
+    });
+
     const propertyName = process.env.PROPERTY_NAME ?? 'Property';
     const nextGuesthouseName = nextInhouse
       ? propertyName
@@ -166,7 +244,8 @@ export class BookingsService {
       data: {
         trip_id: input.tripId,
         guest_name: input.guestName,
-        pax_count: input.paxCount,
+        adult_pax_count: input.adultPaxCount,
+        children_pax_count: input.childrenPaxCount,
         inhouse: nextInhouse,
         guesthouse_name: nextGuesthouseName,
         status: input.status,

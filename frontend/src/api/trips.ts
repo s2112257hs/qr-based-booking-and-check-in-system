@@ -1,9 +1,10 @@
 import { apiUrl } from "@/api/client";
-import { BoatName, Trip, TripDetails } from "@/types";
+import { BoatName, Trip, TripDetails, TripTypeCode } from "@/types";
 import { parseErrorMessage, withAuth } from "@/utils/http";
 
-export async function listTrips(token: string): Promise<Trip[]> {
-  const response = await fetch(apiUrl("/trips"), {
+export async function listTrips(token: string, boat?: BoatName): Promise<Trip[]> {
+  const query = boat ? `?boat=${encodeURIComponent(boat)}` : "";
+  const response = await fetch(apiUrl(`/trips${query}`), {
     headers: withAuth({}, token),
   });
 
@@ -16,7 +17,12 @@ export async function listTrips(token: string): Promise<Trip[]> {
 
 export async function createTrip(
   token: string,
-  input: { date: string; startTime: string; boat?: BoatName },
+  input: {
+    date: string;
+    startTime: string;
+    boat?: BoatName;
+    tripTypeCodes: TripTypeCode[];
+  },
 ): Promise<Trip> {
   const response = await fetch(apiUrl("/trips"), {
     method: "POST",
@@ -47,7 +53,12 @@ export async function getTripDetails(
 export async function updateTrip(
   token: string,
   tripId: string,
-  input: { date?: string; startTime?: string; boat?: BoatName },
+  input: {
+    date?: string;
+    startTime?: string;
+    boat?: BoatName;
+    tripTypeCodes?: TripTypeCode[];
+  },
 ): Promise<Trip> {
   const response = await fetch(apiUrl(`/trips/${tripId}`), {
     method: "PATCH",

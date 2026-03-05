@@ -46,20 +46,41 @@ model Trip {
   date                DateTime  @db.Date
   start_time          DateTime  @db.Time(6)
   boat                boatName
+  max_capacity        Int
   created_by_user_id  String    @db.Uuid
   created_at          DateTime  @default(now())
 
   createdBy           User      @relation("TripCreator", fields: [created_by_user_id], references: [id])
+  activityTypes       TripActivityType[]
   bookings            Booking[]
   checkinsByTrip      Checkin[] @relation("CheckinTrip")
   checkinsBySelection Checkin[] @relation("CheckinSelectedTrip")
+}
+
+model ActivityType {
+  id    String             @id @default(uuid()) @db.Uuid
+  code  String             @unique
+  name  String             @unique
+  trips TripActivityType[]
+}
+
+model TripActivityType {
+  trip_id          String       @db.Uuid
+  activity_type_id String       @db.Uuid
+
+  trip             Trip         @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  activityType     ActivityType @relation(fields: [activity_type_id], references: [id], onDelete: Cascade)
+
+  @@id([trip_id, activity_type_id])
+  @@index([activity_type_id])
 }
 
 model Booking {
   id                   String        @id @default(uuid()) @db.Uuid
   trip_id              String        @db.Uuid
   guest_name           String
-  pax_count            Int
+  adult_pax_count      Int
+  children_pax_count   Int
   inhouse              Boolean
   guesthouse_name      String
   status               BookingStatus @default(ACTIVE)

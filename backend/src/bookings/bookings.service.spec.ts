@@ -21,9 +21,13 @@ describe('BookingsService', () => {
   it('creates booking, ticket hash and returns ticket url', async () => {
     const prisma: any = {
       trip: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'trip-1' }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({ id: 'trip-1' })
+          .mockResolvedValueOnce({ id: 'trip-1', max_capacity: 40 }),
       },
       booking: {
+        findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue({ id: 'booking-1' }),
       },
       ticket: {
@@ -35,7 +39,8 @@ describe('BookingsService', () => {
     const result = await service.createBooking({
       tripId: 'trip-1',
       guestName: 'Jane Doe',
-      paxCount: 2,
+      adultPaxCount: 2,
+      childrenPaxCount: 1,
       inhouse: true,
       createdByUserId: 'receptionist-1',
     });
@@ -44,7 +49,8 @@ describe('BookingsService', () => {
       data: {
         trip_id: 'trip-1',
         guest_name: 'Jane Doe',
-        pax_count: 2,
+        adult_pax_count: 2,
+        children_pax_count: 1,
         inhouse: true,
         guesthouse_name: 'Test Property',
         status: BookingStatus.ACTIVE,
@@ -77,7 +83,8 @@ describe('BookingsService', () => {
       service.createBooking({
         tripId: 'missing-trip',
         guestName: 'Jane Doe',
-        paxCount: 2,
+        adultPaxCount: 2,
+        childrenPaxCount: 0,
         inhouse: true,
         createdByUserId: 'u1',
       }),
@@ -86,7 +93,15 @@ describe('BookingsService', () => {
 
   it('throws BadRequestException when guesthouse is missing for non-inhouse booking', async () => {
     const prisma: any = {
-      trip: { findUnique: jest.fn().mockResolvedValue({ id: 'trip-1' }) },
+      trip: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({ id: 'trip-1' })
+          .mockResolvedValueOnce({ id: 'trip-1', max_capacity: 40 }),
+      },
+      booking: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
     const service = new BookingsService(prisma);
 
@@ -94,7 +109,8 @@ describe('BookingsService', () => {
       service.createBooking({
         tripId: 'trip-1',
         guestName: 'Jane Doe',
-        paxCount: 2,
+        adultPaxCount: 2,
+        childrenPaxCount: 0,
         inhouse: false,
         guesthouseName: '   ',
         createdByUserId: 'u1',

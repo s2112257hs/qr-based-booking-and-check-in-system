@@ -38,7 +38,8 @@ export class BookingsController {
     body: {
       tripId?: string;
       guestName?: string;
-      paxCount?: number;
+      adultPaxCount?: number;
+      childrenPaxCount?: number;
       inhouse?: boolean;
       guesthouseName?: string;
     },
@@ -46,21 +47,28 @@ export class BookingsController {
     if (
       !body.tripId ||
       !body.guestName ||
-      body.paxCount === undefined ||
+      body.adultPaxCount === undefined ||
+      body.childrenPaxCount === undefined ||
       body.inhouse === undefined
     ) {
       throw new BadRequestException(
-        'tripId, guestName, paxCount, inhouse are required',
+        'tripId, guestName, adultPaxCount, childrenPaxCount, inhouse are required',
       );
     }
-    if (!Number.isInteger(body.paxCount) || body.paxCount < 1) {
-      throw new BadRequestException('paxCount must be an integer >= 1');
+    if (!Number.isInteger(body.adultPaxCount) || body.adultPaxCount < 1) {
+      throw new BadRequestException('adultPaxCount must be an integer >= 1');
+    }
+    if (!Number.isInteger(body.childrenPaxCount) || body.childrenPaxCount < 0) {
+      throw new BadRequestException(
+        'childrenPaxCount must be an integer >= 0',
+      );
     }
 
     return this.bookingsService.createBooking({
       tripId: body.tripId,
       guestName: body.guestName,
-      paxCount: body.paxCount,
+      adultPaxCount: body.adultPaxCount,
+      childrenPaxCount: body.childrenPaxCount,
       inhouse: body.inhouse,
       guesthouseName: body.guesthouseName,
       createdByUserId: req.user.id,
@@ -77,22 +85,33 @@ export class BookingsController {
   }
 
   @Patch(':bookingId')
-  @Roles(UserRole.super_admin)
+  @Roles(UserRole.receptionist, UserRole.super_admin)
   update(
     @Param('bookingId') bookingId: string,
     @Body()
     body: {
       tripId?: string;
       guestName?: string;
-      paxCount?: number;
+      adultPaxCount?: number;
+      childrenPaxCount?: number;
       inhouse?: boolean;
       guesthouseName?: string;
       status?: BookingStatus;
     },
   ) {
-    if (body.paxCount !== undefined) {
-      if (!Number.isInteger(body.paxCount) || body.paxCount < 1) {
-        throw new BadRequestException('paxCount must be an integer >= 1');
+    if (body.adultPaxCount !== undefined) {
+      if (!Number.isInteger(body.adultPaxCount) || body.adultPaxCount < 1) {
+        throw new BadRequestException('adultPaxCount must be an integer >= 1');
+      }
+    }
+    if (body.childrenPaxCount !== undefined) {
+      if (
+        !Number.isInteger(body.childrenPaxCount) ||
+        body.childrenPaxCount < 0
+      ) {
+        throw new BadRequestException(
+          'childrenPaxCount must be an integer >= 0',
+        );
       }
     }
     if (body.status && !Object.values(BookingStatus).includes(body.status)) {
@@ -105,7 +124,7 @@ export class BookingsController {
   }
 
   @Delete(':bookingId')
-  @Roles(UserRole.super_admin)
+  @Roles(UserRole.receptionist, UserRole.super_admin)
   remove(@Param('bookingId') bookingId: string) {
     return this.bookingsService.deleteBooking(bookingId);
   }

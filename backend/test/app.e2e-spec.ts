@@ -57,8 +57,14 @@ const users: Record<string, TestUser> = {
 
 const createMockPrisma = () => ({
   user: { findUnique: jest.fn() },
+  activityType: { findMany: jest.fn() },
   trip: { create: jest.fn(), findMany: jest.fn(), findUnique: jest.fn() },
-  booking: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+  booking: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
   ticket: { create: jest.fn(), findUnique: jest.fn() },
   checkin: { create: jest.fn() },
   $transaction: jest.fn(),
@@ -102,6 +108,13 @@ describe('Backend API (e2e)', () => {
       async ({ where }: { where: { username: string } }) =>
         users[where.username] ?? null,
     );
+    prisma.activityType.findMany.mockResolvedValue([
+      {
+        id: 'activity-1',
+        code: 'DOLPHIN_CRUISE',
+        name: 'Dolphin Cruise',
+      },
+    ]);
 
     prisma.trip.create.mockImplementation(async ({ data }: any) => ({
       id: 'trip-1',
@@ -116,6 +129,7 @@ describe('Backend API (e2e)', () => {
       ...data,
       created_at: new Date(),
     }));
+    prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.findUnique.mockResolvedValue({
       id: 'booking-1',
       status: BookingStatus.ACTIVE,
@@ -188,7 +202,11 @@ describe('Backend API (e2e)', () => {
       await request(app.getHttpServer())
         .post('/trips')
         .set('Authorization', `Bearer ${token}`)
-        .send({ date: '2026-03-04', startTime: '10:00' })
+        .send({
+          date: '2026-03-04',
+          startTime: '10:00',
+          tripTypeCodes: ['DOLPHIN_CRUISE'],
+        })
         .expect(403);
     });
 
@@ -198,13 +216,21 @@ describe('Backend API (e2e)', () => {
       await request(app.getHttpServer())
         .post('/trips')
         .set('Authorization', `Bearer ${token}`)
-        .send({ date: '03/04/2026', startTime: '10:00' })
+        .send({
+          date: '03/04/2026',
+          startTime: '10:00',
+          tripTypeCodes: ['DOLPHIN_CRUISE'],
+        })
         .expect(400);
 
       await request(app.getHttpServer())
         .post('/trips')
         .set('Authorization', `Bearer ${token}`)
-        .send({ date: '2026-03-04', startTime: '10' })
+        .send({
+          date: '2026-03-04',
+          startTime: '10',
+          tripTypeCodes: ['DOLPHIN_CRUISE'],
+        })
         .expect(400);
     });
 
@@ -213,7 +239,12 @@ describe('Backend API (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/trips')
         .set('Authorization', `Bearer ${token}`)
-        .send({ date: '2026-03-04', startTime: '10:00', boat: 'W_speed' })
+        .send({
+          date: '2026-03-04',
+          startTime: '10:00',
+          boat: 'W_speed',
+          tripTypeCodes: ['DOLPHIN_CRUISE'],
+        })
         .expect(201);
 
       expect(res.body.id).toBe('trip-1');
@@ -222,7 +253,24 @@ describe('Backend API (e2e)', () => {
 
     it('GET /trips returns trip list', async () => {
       prisma.trip.findMany.mockResolvedValue([
-        { id: 'trip-1', date: new Date('2026-03-04'), start_time: new Date() },
+        {
+          id: 'trip-1',
+          date: new Date('2026-03-04'),
+          start_time: new Date(),
+          boat: 'W_speed',
+          max_capacity: 20,
+          created_by_user_id: 'admin',
+          created_at: new Date(),
+          bookings: [],
+          activityTypes: [
+            {
+              activityType: {
+                code: 'DOLPHIN_CRUISE',
+                name: 'Dolphin Cruise',
+              },
+            },
+          ],
+        },
       ]);
       const token = await loginAs('admin_user');
 
@@ -245,13 +293,14 @@ describe('Backend API (e2e)', () => {
         .send({
           tripId: 'trip-1',
           guestName: 'Jane',
-          paxCount: 1,
+          adultPaxCount: 1,
+          childrenPaxCount: 0,
           inhouse: true,
         })
         .expect(403);
     });
 
-    it('POST /bookings validates required fields and paxCount', async () => {
+    it('POST /bookings validates required fields and pax counts', async () => {
       const token = await loginAs('reception_user');
 
       await request(app.getHttpServer())
@@ -266,7 +315,8 @@ describe('Backend API (e2e)', () => {
         .send({
           tripId: 'trip-1',
           guestName: 'Jane',
-          paxCount: 0,
+          adultPaxCount: 0,
+          childrenPaxCount: 0,
           inhouse: true,
         })
         .expect(400);
@@ -281,7 +331,8 @@ describe('Backend API (e2e)', () => {
         .send({
           tripId: 'trip-1',
           guestName: 'Jane',
-          paxCount: 2,
+          adultPaxCount: 2,
+          childrenPaxCount: 0,
           inhouse: false,
         })
         .expect(400);
@@ -295,7 +346,8 @@ describe('Backend API (e2e)', () => {
         .send({
           tripId: 'trip-1',
           guestName: 'Jane',
-          paxCount: 2,
+          adultPaxCount: 2,
+          childrenPaxCount: 1,
           inhouse: true,
         })
         .expect(201);

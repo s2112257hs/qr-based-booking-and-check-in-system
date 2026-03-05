@@ -2,11 +2,27 @@ export type Role = "super_admin" | "receptionist" | "staff_scanner";
 
 export type BoatName = "W_speed" | "Hiriwave" | "Small_speed";
 
+export type TripTypeCode =
+  | "DOLPHIN_CRUISE"
+  | "WHALE_SHARK_SNORKELLING"
+  | "MANTA_SNORKELLING"
+  | "FISH_BANK_SNORKELLING"
+  | "TURTLE_SNORKELLING_AND_SANDBANK"
+  | "REEF_SNORKEL_TRIP";
+
+export type TripTypeItem = {
+  code: TripTypeCode;
+  name: string;
+};
+
 export type Trip = {
   id: string;
   date: string;
   start_time: string;
   boat: BoatName;
+  trip_types: TripTypeItem[];
+  max_capacity: number;
+  booked_pax_count?: number;
 };
 
 export type BookingStatus = "ACTIVE" | "CANCELLED" | "CHECKED_IN";
@@ -15,7 +31,8 @@ export type Booking = {
   id: string;
   trip_id: string;
   guest_name: string;
-  pax_count: number;
+  adult_pax_count: number;
+  children_pax_count: number;
   inhouse: boolean;
   guesthouse_name: string;
   status: BookingStatus;
